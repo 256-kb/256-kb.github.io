@@ -1,130 +1,26 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Intermery</title>
-
-<style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family: 'Segoe UI', sans-serif;
-}
-
-body{
-  background: linear-gradient(135deg,#0f172a,#1e293b);
-  color:white;
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-}
-
-.container{
-  backdrop-filter: blur(20px);
-  background: rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.1);
-  padding:60px;
-  border-radius:20px;
-  text-align:center;
-  animation: fadeIn 1.2s ease;
-}
-
-h1{
-  font-size:3em;
-  margin-bottom:10px;
-  background: linear-gradient(90deg,#38bdf8,#6366f1);
-  -webkit-background-clip:text;
-  color:transparent;
-}
-
-p{
-  opacity:0.7;
-  margin-bottom:30px;
-}
-
-.btn{
-  padding:12px 25px;
-  border-radius:30px;
-  border:none;
-  background: linear-gradient(90deg,#6366f1,#38bdf8);
-  color:white;
-  cursor:pointer;
-  transition:0.3s;
-}
-
-.btn:hover{
-  transform:scale(1.1);
-  box-shadow:0 0 20px rgba(99,102,241,0.6);
-}
-
-@keyframes fadeIn{
-  from{opacity:0; transform:translateY(30px);}
-  to{opacity:1; transform:translateY(0);}
-}
-
-/* particules */
-canvas{
-  position:absolute;
-  top:0;
-  left:0;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Mini CS 3D</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+    #ui {
+      position: absolute; top: 20px; left: 20px; z-index: 10;
+      background: rgba(0,0,0,0.6); padding: 10px; color: white;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+  <script src="supabase.js"></script>
 </head>
-
 <body>
 
-<canvas id="bg"></canvas>
-
-<div class="container">
-  <h1>Intermery</h1>
-  <p>Ce site m’appartient 🚀</p>
-  <button class="btn">Explorer</button>
+<div id="ui">
+  <input id="pseudo" placeholder="Pseudo">
+  <input id="room" value="room1">
+  <button id="join">Rejoindre</button>
 </div>
 
-<script>
-const canvas = document.getElementById("bg");
-const ctx = canvas.getContext("2d");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let particles = [];
-
-for(let i=0;i<80;i++){
-  particles.push({
-    x:Math.random()*canvas.width,
-    y:Math.random()*canvas.height,
-    r:Math.random()*2,
-    dx:(Math.random()-0.5),
-    dy:(Math.random()-0.5)
-  });
-}
-
-function animate(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  particles.forEach(p=>{
-    p.x+=p.dx;
-    p.y+=p.dy;
-
-    if(p.x<0||p.x>canvas.width) p.dx*=-1;
-    if(p.y<0||p.y>canvas.height) p.dy*=-1;
-
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-    ctx.fillStyle="white";
-    ctx.fill();
-  });
-
-  requestAnimationFrame(animate);
-}
-
-animate();
-</script>
-
+<script src="game.js"></script>
 </body>
 </html>
