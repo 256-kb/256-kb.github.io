@@ -2,25 +2,318 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Mini CS 3D</title>
+  <title>Mini CS 3D Browser</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #ui {
-      position: absolute; top: 20px; left: 20px; z-index: 10;
-      background: rgba(0,0,0,0.6); padding: 10px; color: white;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: #fff;
+    }
+    #hud {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    #centerDot {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      margin-left: -3px;
+      margin-top: -3px;
+      border-radius: 50%;
+      background: white;
+      z-index: 9;
+      pointer-events: none;
+    }
+    #help {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    #startOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 20;
+    }
+    #startOverlay button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      border: none;
+      background: #1e90ff;
+      color: white;
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-  <script src="supabase.js"></script>
 </head>
 <body>
 
-<div id="ui">
-  <input id="pseudo" placeholder="Pseudo">
-  <input id="room" value="room1">
-  <button id="join">Rejoindre</button>
+<div id="hud">
+  <div>Mini CS 3D</div>
+  <div>Score : <span id="score">0</span></div>
+  <div>Cibles restantes : <span id="targetsLeft">0</span></div>
 </div>
 
-<script src="game.js"></script>
+<div id="centerDot"></div>
+
+<div id="help">
+  ZQSD pour bouger • Souris pour viser • Clic gauche pour tirer<br>
+  Clique sur l'écran pour capturer la souris.
+</div>
+
+<div id="startOverlay">
+  <h1>Mini CS 3D</h1>
+  <p>Un petit FPS 3D dans le navigateur.</p>
+  <p>ZQSD pour bouger, souris pour viser, clic pour tirer.</p>
+  <button id="startBtn">Commencer</button>
+</div>
+
+<script>
+  // === VARIABLES GLOBALES ===
+  let scene, camera, renderer;
+  let player = {
+    x: 0,
+    y: 1.7,
+    z: 5,
+    rotY: 0,
+    rotX: 0
+  };
+  let keys = {};
+  let targets = [];
+  let score = 0;
+
+  const scoreEl = document.getElementById('score');
+  const targetsLeftEl = document.getElementById('targetsLeft');
+  const startOverlay = document.getElementById('startOverlay');
+  const startBtn = document.getElementById('startBtn');
+
+  // === INPUT CLAVIER ===
+  document.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
+  });
+  document.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+  });
+
+  // === POINTER LOCK (souris) ===
+  document.body.addEventListener('click', () => {
+    if (document.pointerLockElement !== document.body) {
+      document.body.requestPointerLock();
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === document.body) {
+      const sens = 0.002;
+      player.rotY -= e.movementX * sens;
+      player.rotX -= e.movementY * sens;
+      const limit = 1.5;
+      if (player.rotX > limit) player.rotX = limit;
+      if (player.rotX < -limit) player.rotX = -limit;
+    }
+  });
+
+  // === TIR (clic gauche) ===
+  document.addEventListener('mousedown', (e) => {
+    if (e.button === 0) {
+      shoot();
+    }
+  });
+
+  // === INITIALISATION 3D ===
+  function init3D() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101018);
+
+    camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(player.x, player.y, player.z);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Lumière
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x222233, 0.8);
+    scene.add(hemi);
+
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(5, 10, 2);
+    scene.add(dir);
+
+    // Sol
+    const floorGeo = new THREE.PlaneGeometry(40, 40);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x303030 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // Murs simples (style petite arène)
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+    const wallGeo = new THREE.BoxGeometry(40, 4, 1);
+
+    const wall1 = new THREE.Mesh(wallGeo, wallMat);
+    wall1.position.set(0, 2, -20);
+    scene.add(wall1);
+
+    const wall2 = wall1.clone();
+    wall2.position.set(0, 2, 20);
+    scene.add(wall2);
+
+    const wall3 = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 40), wallMat);
+    wall3.position.set(-20, 2, 0);
+    scene.add(wall3);
+
+    const wall4 = wall3.clone();
+    wall4.position.set(20, 2, 0);
+    scene.add(wall4);
+
+    // Cibles
+    spawnTargets();
+
+    window.addEventListener('resize', onWindowResize);
+    animate();
+  }
+
+  function spawnTargets() {
+    const targetGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const targetMat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
+
+    const positions = [
+      [-5, 0.4, -5],
+      [5, 0.4, -8],
+      [0, 0.4, -12],
+      [-8, 0.4, 3],
+      [8, 0.4, 6],
+      [0, 0.4, 10],
+      [-10, 0.4, 12],
+      [10, 0.4, -3]
+    ];
+
+    positions.forEach(pos => {
+      const mesh = new THREE.Mesh(targetGeo, targetMat.clone());
+      mesh.position.set(pos[0], pos[1], pos[2]);
+      mesh.userData.isTarget = true;
+      scene.add(mesh);
+      targets.push(mesh);
+    });
+
+    targetsLeftEl.textContent = targets.length;
+  }
+
+  // === TIR ===
+  function shoot() {
+    // Raycast depuis la caméra
+    const raycaster = new THREE.Raycaster();
+    const dir = new THREE.Vector3(0, 0, -1);
+    dir.applyEuler(camera.rotation);
+    raycaster.set(camera.position.clone(), dir);
+
+    const intersects = raycaster.intersectObjects(targets, false);
+
+    if (intersects.length > 0) {
+      const hit = intersects[0].object;
+      // Effet visuel simple : changer couleur + enlever
+      hit.material.color.set(0x00ff00);
+      scene.remove(hit);
+      targets = targets.filter(t => t !== hit);
+      score++;
+      scoreEl.textContent = score;
+      targetsLeftEl.textContent = targets.length;
+
+      // Petit feedback console
+      console.log('Touché ! Score =', score);
+    }
+  }
+
+  // === RESIZE ===
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  // === BOUCLE DE JEU ===
+  function animate() {
+    requestAnimationFrame(animate);
+    updatePlayer();
+    renderer.render(scene, camera);
+  }
+
+  function updatePlayer() {
+    const speed = 0.12;
+
+    // Direction avant
+    const forward = new THREE.Vector3(
+      Math.sin(player.rotY),
+      0,
+      Math.cos(player.rotY)
+    );
+    const right = new THREE.Vector3(
+      Math.sin(player.rotY + Math.PI / 2),
+      0,
+      Math.cos(player.rotY + Math.PI / 2)
+    );
+
+    if (keys['z'] || keys['w']) {
+      player.x += forward.x * speed;
+      player.z += forward.z * speed;
+    }
+    if (keys['s']) {
+      player.x -= forward.x * speed;
+      player.z -= forward.z * speed;
+    }
+    if (keys['q'] || keys['a']) {
+      player.x += right.x * speed;
+      player.z += right.z * speed;
+    }
+    if (keys['d']) {
+      player.x -= right.x * speed;
+      player.z -= right.z * speed;
+    }
+
+    // Limites simples de l'arène
+    const limit = 18;
+    if (player.x > limit) player.x = limit;
+    if (player.x < -limit) player.x = -limit;
+    if (player.z > limit) player.z = limit;
+    if (player.z < -limit) player.z = -limit;
+
+    camera.position.set(player.x, player.y, player.z);
+    camera.rotation.set(player.rotX, player.rotY, 0);
+  }
+
+  // === START ===
+  startBtn.addEventListener('click', () => {
+    startOverlay.style.display = 'none';
+    init3D();
+  });
+</script>
+
 </body>
 </html>
