@@ -7,11 +7,17 @@ document.getElementById('goBtn').addEventListener('click', function() {
     
     loading.classList.remove('hidden');
     
-    // Utiliser un service de proxy public
-    // Note : Ces services peuvent changer ou devenir indisponibles
-    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+    // Essayer plusieurs services de proxy
+    const proxyServices = [
+        'https://corsproxy.io/?',
+        'https://api.allorigins.win/raw?url=',
+        'https://thingproxy.freeboard.io/fetch/'
+    ];
     
-    iframe.src = proxyUrl + url;
+    // Essayer le premier service, tu peux changer d'index si celui-ci ne fonctionne pas
+    const proxyUrl = proxyServices[0];
+    
+    iframe.src = proxyUrl + encodeURIComponent(url);
     
     iframe.onload = function() {
         loading.classList.add('hidden');
@@ -21,11 +27,4 @@ document.getElementById('goBtn').addEventListener('click', function() {
         loading.classList.add('hidden');
         alert('Erreur de chargement. Vérifiez l\'URL et réessayez.');
     };
-});
-
-// Permettre l'appui sur la touche Entrée
-document.getElementById('url').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        document.getElementById('goBtn').click();
-    }
 });
