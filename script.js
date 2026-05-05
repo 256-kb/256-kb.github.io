@@ -7,17 +7,17 @@ document.getElementById('goBtn').addEventListener('click', function() {
     
     loading.classList.remove('hidden');
     
-    // Essayer plusieurs services de proxy
-    const proxyServices = [
-        'https://corsproxy.io/?',
-        'https://api.allorigins.win/raw?url=',
-        'https://thingproxy.freeboard.io/fetch/'
-    ];
+    // Encoder l'URL en base64 pour contourner les filtres simples
+    const encodedUrl = btoa(url);
     
-    // Essayer le premier service, tu peux changer d'index si celui-ci ne fonctionne pas
-    const proxyUrl = proxyServices[0];
-    
-    iframe.src = proxyUrl + encodeURIComponent(url);
+    // Utiliser un service de décodage côté client
+    iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(`
+        <script>
+            const encodedUrl = "${encodedUrl}";
+            const url = atob(encodedUrl);
+            window.location.href = url;
+        </script>
+    `);
     
     iframe.onload = function() {
         loading.classList.add('hidden');
