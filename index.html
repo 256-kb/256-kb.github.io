@@ -1,114 +1,21 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-<meta charset="utf-8">
-<title>mini chrome</title>
-<style>
-body { margin:0; font-family:Arial; background:#111; color:white; }
-
-.top {
-  display:flex;
-  gap:8px;
-  padding:8px;
-  background:#1a1a1a;
-}
-
-input {
-  flex:1;
-  padding:8px;
-  border:none;
-  outline:none;
-  border-radius:6px;
-}
-
-button {
-  padding:8px 10px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.tabs {
-  display:flex;
-  gap:5px;
-  padding:5px;
-  background:#222;
-}
-
-.tab {
-  padding:6px 10px;
-  background:#333;
-  border-radius:6px;
-  cursor:pointer;
-  font-size:12px;
-}
-
-iframe {
-  width:100%;
-  height:92vh;
-  border:none;
-  background:white;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Web</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
-<div class="top">
-  <input id="url" placeholder="google.com ou https://...">
-  <button onclick="go()">go</button>
-  <button onclick="newTab()">+</button>
-</div>
-
-<div class="tabs" id="tabs"></div>
-
-<iframe id="frame"></iframe>
-
-<script>
-let tabs = [];
-let active = 0;
-
-function normalize(url){
-  if(!url.includes(".")) return "https://www.google.com/search?q=" + url;
-  if(!url.startsWith("http")) return "https://" + url;
-  return url;
-}
-
-function go(){
-  let url = normalize(document.getElementById("url").value);
-  tabs[active] = url;
-  render();
-}
-
-function newTab(){
-  tabs.push("https://google.com");
-  active = tabs.length - 1;
-  render();
-}
-
-function switchTab(i){
-  active = i;
-  render();
-}
-
-function render(){
-  document.getElementById("frame").src = tabs[active];
-
-  let t = document.getElementById("tabs");
-  t.innerHTML = "";
-
-  tabs.forEach((u,i)=>{
-    let div = document.createElement("div");
-    div.className = "tab";
-    div.innerText = "tab " + (i+1);
-    div.onclick = ()=>switchTab(i);
-    t.appendChild(div);
-  });
-}
-
-// init
-newTab();
-</script>
-
+    <div class="container">
+        <h1>Proxy Web</h1>
+        <div class="search-box">
+            <input type="text" id="url" placeholder="Entrez l'URL du site à visiter">
+            <button id="goBtn">Aller</button>
+        </div>
+        <div id="loading" class="hidden">Chargement...</div>
+        <iframe id="content" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
